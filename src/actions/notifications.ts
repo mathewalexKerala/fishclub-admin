@@ -1,6 +1,11 @@
+
 'use server';
 
 import { createClient } from '@/supabase/server';
+
+type UserTokenData = {
+  expo_notification_token: string | null;
+};
 
 async function sendPushNotification({
   expoPushToken,
@@ -30,7 +35,7 @@ async function sendPushNotification({
   });
 }
 
-export const getUserNotificationToken = async (userId: string) => {
+export const getUserNotificationToken = async (userId: string): Promise<UserTokenData | null> => {
   const supabase = createClient();
   const { data, error } = await supabase
     .from('users')
@@ -38,15 +43,19 @@ export const getUserNotificationToken = async (userId: string) => {
     .eq('id', userId)
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error(error);
+    throw new Error(error.message);
+  }
 
-  return data;
+  return data ? data : null;
 };
 
 export const sendNotification = async (userId: string, status: string) => {
   const tokenData = await getUserNotificationToken(userId);
 
-  if (!tokenData.expo_notification_token) {
+  if (!tokenData || !tokenData.expo_notification_token) {
+    console.log('No valid expo_notification_token found.');
     return;
   }
 
